@@ -207,7 +207,6 @@ void NX_Pr(void);
 void EN_GPIO30(void);
 void DIS_GPIO30(void);
 interrupt void DPRAM_isr(void);
-interrupt void DPRAM_isr_Fix(void);
 void DspStCl(void);
 void OvpFcTsCp(void);
 void OvpCp(void);
@@ -217,50 +216,53 @@ void BtCp(void);
 /* MAIN */
 void main(void) {
 
-	InitSysCtrl();
+/*step1*/
+	InitSysCtrl();//150MHz
+
+/*step2*/
 	InitGpio();
 	InitXintf();
 
 	DELAY_US(10000L);
 
+	/*step3*/
 	DINT;
 	IER = 0x0000;
 	IFR = 0x0000;
 	InitPieCtrl();
 	InitPieVectTable();
-
 	EALLOW;
-	//	PieVectTable.XINT1 = &DPRAM_isr;
-	PieVectTable.XINT1 = &DPRAM_isr_Fix;
+	PieVectTable.XINT1 = &DPRAM_isr;
 	EDIS;
 
+	/*step4*/
 	InitCpuTimers();
 	InitXInterrupt();
-	IER = M_INT1;
-	PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
 
-	EINT;
-	ERTM;
-
+	/*step5*/
 	DspInit();
 	McuInit();
 
+	IER = M_INT1;
+	PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
+	EINT;
+	ERTM;
+
+/*step6*/
 	while (1) {
 		//--------------------------------------------------------------------------------
-		GPIO_Temp181 = GpioDataRegs.GPADAT.bit.GPIO18;			//
+		GPIO_Temp181 = GpioDataRegs.GPADAT.bit.GPIO18;			//GPIO18外部中断标志位，中断来源DPRAM
 		DELAY_US(2L);
 		//
 		GPIO_Temp182 = GpioDataRegs.GPADAT.bit.GPIO18;
 		if ((GPIO_Temp181 == 0) && (GPIO_Temp182 == 0)) {
-			PX_In_Spf.NX_McuPlCn = *(XintfZone7 + 0x7FFF);			//
+			PX_In_Spf.NX_McuPlCn = *(XintfZone7 + 0x7FFF);			//清除DPRAM右侧DSP中断标志
 		}
 	}
 }
 //==============================================================================
 interrupt void DPRAM_isr(void) //after DSP1 has written to DPRAM, trigger the interrupt
 {
-	/*保护现场*/
-
 	/**/
 	PX_Out_Spf.NX_DspPlCn++;
 	if (PX_Out_Spf.NX_DspPlCn > 32767)
@@ -269,14 +271,9 @@ interrupt void DPRAM_isr(void) //after DSP1 has written to DPRAM, trigger the in
 	DIS_GPIO30();
 
 	DPRAM_RD(); //
-
 	NX_Pr();
-
 	DspStCl();
 
-
-
-	if (!(TestFlg == 0x55)) {
 		DspTask_B();
 
 		Cnt_1ms++;
@@ -307,18 +304,7 @@ interrupt void DPRAM_isr(void) //after DSP1 has written to DPRAM, trigger the in
 			Cnt_16ms = 0;
 
 		}
-	} else {
-		/*
-		 *
-		 ************************************************************* */
-		PX_Out_Spf.XT_PwmPdVv = 6944;
-		DspData.XX_Mode = !DspData.XX_Mode;
-		DspData.XX_DutyA = 0.2;
-		DspData.XX_DutyB = 0.3;
-		DspData.XX_DutyC = 0.6;
-		/*******************************************************************************/
 
-	}
 
 	/**/
 	if (PX_Out_Spf.SX_Run == 1) {
@@ -361,119 +347,6 @@ interrupt void DPRAM_isr(void) //after DSP1 has written to DPRAM, trigger the in
 }
 
 //==============================================================================
-interrupt void DPRAM_isr_Fix(void) //固定中断频率4.35kHz
-{
-	/*保护现场*/
-
-	/**/
-	PX_Out_Spf.NX_DspPlCn++;
-	if (PX_Out_Spf.NX_DspPlCn > 32767)
-		PX_Out_Spf.NX_DspPlCn = 0;
-
-	DIS_GPIO30();
-
-	//	PX_In_Spf.NX_McuPlCn = *(XintfZone7 + 0x7FFF); // MCU pulse(heartbeat) counter    (RAM 0x7FFF clear)
-	//	DspData.XU_PhABLk = *(XintfZone7 + 0x7) * 0.1 * 2.0;		// AB
-	//
-	//	Cnt_Period++;
-	//	if (Cnt_Period >= 2700) {
-	//		Cnt_sec++;
-	//		Cnt_Period = 0;
-	//	}
-	//	if(Cnt_sec>=60.0){
-	//		Cnt_min++;
-	//		Cnt_sec = 0;
-	//	}
-
-
-
-	//	Cnt_B++;
-	//	if (Cnt_B >= 1) {
-	DPRAM_RD(); //
-	NX_Pr();
-	DspStCl();
-	//		if (!(TestFlg == 0x55)) {
-
-	DspTask_185us();
-
-	DspTask_B();
-
-	Cnt_1ms++;
-	if (Cnt_1ms >= 3) {
-		DspTask_T2();
-		Cnt_1ms = 0;
-	}
-
-	Cnt_4ms++;
-	if (Cnt_4ms >= 11) {
-		McuTask_4ms();
-		Cnt_4ms = 0;
-	}
-
-	Cnt_16ms++;
-	if (Cnt_16ms >= 44) {
-		McuParam.PF_3PhNom = Limit(Ext_F, 40.0, 60.0);
-		McuParam.PU_U3PhRef3 = Limit(Ext_U, 50.0, 380.0) * SQRT2bySQRT3;
-		McuParam.PU_U3PhRef4 = McuParam.PU_U3PhRef3;
-		McuTask_16ms();
-		Cnt_16ms = 0;
-	}
-	//		} else {
-		//			/*
-		//			 *
-	//			 ************************************************************* */
-	//			PX_Out_Spf.XT_PwmPdVv = 6944;
-	//			DspData.XX_Mode = !DspData.XX_Mode;
-	//			DspData.XX_DutyA = 0.2;
-	//			DspData.XX_DutyB = 0.3;
-	//			DspData.XX_DutyC = 0.6;
-	//			/*******************************************************************************/
-	//		}
-
-	/**/
-	if (PX_Out_Spf.SX_Run == 1) {
-		if (DspData.XX_Mode == 1) {
-			PX_Out_Spf.XX_PwmMo = 21; //
-			PX_Out_Spf.XX_Pwm1AVv = PX_Out_Spf.XT_PwmPdVv
-					* (1.0 - DspData.XX_DutyA);
-			PX_Out_Spf.XX_Pwm2AVv = PX_Out_Spf.XT_PwmPdVv
-					* (1.0 - DspData.XX_DutyB);
-			PX_Out_Spf.XX_Pwm3AVv = PX_Out_Spf.XT_PwmPdVv
-					* (1.0 - DspData.XX_DutyC);
-		}
-		if (DspData.XX_Mode == 0) {
-			PX_Out_Spf.XX_PwmMo = 0; //
-			PX_Out_Spf.XX_Pwm1AVv = PX_Out_Spf.XT_PwmPdVv
-					* DspData.XX_DutyA;
-			PX_Out_Spf.XX_Pwm2AVv = PX_Out_Spf.XT_PwmPdVv
-					* DspData.XX_DutyB;
-			PX_Out_Spf.XX_Pwm3AVv = PX_Out_Spf.XT_PwmPdVv
-					* DspData.XX_DutyC;
-		}
-	} else {
-		PX_Out_Spf.XX_PwmMo = 0;
-		PX_Out_Spf.XX_Pwm1AVv = PX_Out_Spf.XT_PwmPdVv * 0.5;
-		PX_Out_Spf.XX_Pwm2AVv = PX_Out_Spf.XT_PwmPdVv * 0.5;
-		PX_Out_Spf.XX_Pwm3AVv = PX_Out_Spf.XT_PwmPdVv * 0.5;
-	}
-
-	PX_Out_Spf.XU_PhAB_Rms = DspData.XU_3PhAbs / SQRT2;
-	PX_Out_Spf.XF_PhAB = DspData.XF_U3Ph;
-	PX_Out_Spf.XI_PhA_Rms = DspData.XI_Ph1Rms_Flt;
-	PX_Out_Spf.XI_PhB_Rms = DspData.XI_Ph2Rms_Flt;
-	PX_Out_Spf.XI_PhC_Rms = DspData.XI_Ph3Rms_Flt;
-	PX_Out_Spf.XP_Out = DspData.XP_3Ph_Flt;
-	PX_Out_Spf.XQ_Out = DspData.XQ_3Ph_Flt;
-	PX_Out_Spf.XI_DcLkEst = DspData.XP_3Ph_Flt / DspData.XU_DcLkFlt;
-
-	DPRAM_WR(); //
-	//		Cnt_B = 0;
-	//	}
-
-	EN_GPIO30();
-	PieCtrlRegs.PIEACK.all |= PIEACK_GROUP1;
-}
-//==============================================================================
 void DPRAM_RD(void) //MCU-->DSP
 {
 	//----------------------------------------------------
@@ -484,11 +357,13 @@ void DPRAM_RD(void) //MCU-->DSP
 	PX_In_Spf.XX_McuFlag1.all = *(XintfZone7 + 0x0014);
 
 	DspData.XU_DcLk = *(XintfZone7 + 0x6) * 0.1 * 2.0;	// DC-link voltage, V
-	DspData.XI_DcLk = 0;		// DC-link current, V
+//	DspData.XI_DcLk = 0;		// DC-link current, V
 	DspData.XI_PhA = *(XintfZone7 + 0x8) * 0.1 / 2.0 * (-1.0);// phase A current, A
 	DspData.XI_PhB = *(XintfZone7 + 0xA) * 0.1 / 2.0 * (-1.0);// phase B current, A
-	DspData.XI_PhC = *(XintfZone7 + 0x9) * 0.1 / 2.0 * (-1.0);// phase C current, A
+//	DspData.XI_PhC = *(XintfZone7 + 0x9) * 0.1 / 2.0 * (-1.0);// phase C current, A
+	DspData.XI_PhC = -DspData.XI_PhA-DspData.XI_PhB;
 	DspData.XU_PhABLk = *(XintfZone7 + 0x7) * 0.1 * 2.0;		// AB
+
 	Ext_U = *(XintfZone7 + 0x11) * 10.0;		//电压
 	Ext_F = *(XintfZone7 + 0x12) * 1.0;		//频率
 	TestFlg = *(XintfZone7 + 0x1A);		//0x55为测试
@@ -569,7 +444,7 @@ void DPRAM_WR(void)			//DSP-->MCU
 	*(XintfZone7 + 0x2F) = DA[7];
 
 	//---------------------------------------------------
-	*(XintfZone7 + 0x7FFE) = PX_Out_Spf.NX_DspPlCn;		// 右侧写7FFE，左侧产生中断
+	*(XintfZone7 + 0x7FFE) = PX_Out_Spf.NX_DspPlCn;		// 右侧写7FFE，左侧产生中断 ，给MCU中断
 	//------------------------------------------------------------
 
 }

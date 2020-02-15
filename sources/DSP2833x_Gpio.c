@@ -27,7 +27,7 @@ void InitGpio(void)
 	//Sampling period
 //	GpioCtrlRegs.GPACTRL.bit.QUALPRD0 = 0x0A;//GPIO0-7
 //	GpioCtrlRegs.GPACTRL.bit.QUALPRD1 = 0x0A;//GPIO8-15
-	GpioCtrlRegs.GPACTRL.bit.QUALPRD2 = 0x0A;//GPIO16-23
+	GpioCtrlRegs.GPACTRL.bit.QUALPRD2 = 0x0A;//GPIO16-23  20xTsysclkout input
 //	GpioCtrlRegs.GPACTRL.bit.QUALPRD3 = 0x0A;//GPIO24-31
 //	GpioCtrlRegs.GPBCTRL.bit.QUALPRD0 = 0x0A;//GPIO32-39
 //	GpioCtrlRegs.GPBCTRL.bit.QUALPRD1 = 0x0A;//GPIO40-47

@@ -405,18 +405,11 @@ struct Mcu_Param
 
 };
 
-/**/
-extern volatile struct Dsp_Data DspData;
-extern volatile struct Dsp_Param DspParam;
-extern volatile struct Mcu_Data McuData;
-extern volatile struct Mcu_Param McuParam;
-
 /*DSP*/
 /*IRQB*/
 //Дж±д
 extern void DspInit(void);
 
-extern void DspTask_185us(void);
 extern void DspTask_B(void);
 extern void DspTask_T2(void);
 extern void DspTask_T3(void);
@@ -426,6 +419,7 @@ extern void McuInit(void);
 
 extern void McuTask_4ms(void);
 extern void McuTask_16ms(void);
+
 
 /*math*/
 extern void Delay(volatile float32 *Dy, float32 Src);
@@ -448,6 +442,7 @@ extern float32 Min(float32 a, float32 b);
 extern float32 Max(float32 a, float32 b);
 extern float32 Limit(float32 x, float32 low, float32 up);
 
+/*compelx math*/
 extern void CPLX2FRAC(volatile float32 *Re, volatile float32 *Im, cfloat32 Z);
 extern cfloat32 FRAC2CPLX(float32 Re, float32 Im);
 extern cfloat32 CPLXCONJ(cfloat32 Z);
@@ -461,15 +456,19 @@ extern cfloat32 CPLXSUB(cfloat32 Z1, cfloat32 Z2);
 extern cfloat32 CPLXADD(cfloat32 Z1, cfloat32 Z2);
 extern cfloat32 _PREVCPLX(cfloat32 Z);
 extern cfloat32 CPLXDIVSCA(cfloat32 Z1, float32 F, int32 m);
-
 extern cfloat32 CPLXDIV(cfloat32 Z1, cfloat32 Z2);
 extern void CPLX2POL(volatile float32 *r, volatile float32 *fi,
 		volatile cfloat32 Z);
-
 extern cfloat32 PH3TOCPLX(float32 a, float32 b, float32 c);
 extern void CPLXTO3PH(volatile float32 *a, volatile float32 *b,
 		volatile float32 *c, cfloat32 Z);
 extern cfloat32 POL2CPLX(float32 r, float32 fi);
+
+/**/
+extern float32 OvMd(float32 M1);
+extern void SVPWM(volatile float32 *DutyA, volatile float32 *DutyB,
+		volatile float32 *DutyC, cfloat32 _3PhAB);
+extern void DdCmp(void);
 
 #ifdef __cplusplus
 }
@@ -605,6 +604,12 @@ extern void AdaptIIRNotchFilter(TYPE_IIRFILTER_2ND *data, float32 W0,
 #ifdef __cplusplus
 }
 #endif
+
+/**/
+extern volatile struct Dsp_Data DspData;
+extern volatile struct Dsp_Param DspParam;
+extern volatile struct Mcu_Data McuData;
+extern volatile struct Mcu_Param McuParam;
 
 extern TYPE_SOGIOSGMA sogiosg;
 extern TYPE_IIRFILTER_2ND U3PhRe, U3PhIm;
